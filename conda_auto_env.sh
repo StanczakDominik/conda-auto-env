@@ -13,21 +13,21 @@
 
 function conda_auto_env() {
   if [ -e "environment.yml" ]; then
-    # echo "environment.yml file found"
-    ENV=$(head -n 1 environment.yml | cut -f2 -d ' ')
+    ENV=$(cat environment.yml | grep name | sed -r 's/name: ([^\s]+)/\1/g' | xargs)
+    echo "environment.yml file found describing environment '$ENV'"
     # Check if the environment is already active.
     if [[ $PATH != */envs/*$ENV*/* ]]; then
       # Attempt to activate environment.
       CONDA_ENVIRONMENT_ROOT="" #For spawned shells
-      source activate $ENV
+      conda activate $ENV
       # Set root directory of active environment.
-      CONDA_ENVIRONMENT_ROOT="$(pwd)"
       if [ $? -ne 0 ]; then
         # Create the environment and activate.
         echo "Conda environment '$ENV' doesn't exist: Creating."
         conda env create -q
-        source activate $ENV
+        conda activate $ENV
       fi
+      CONDA_ENVIRONMENT_ROOT="$(pwd)"
     fi
   # Deactivate active environment if we are no longer among its subdirectories.
   elif [[ $PATH = */envs/* ]]\
@@ -35,12 +35,12 @@ function conda_auto_env() {
     && [[ $(pwd) != $CONDA_ENVIRONMENT_ROOT/* ]]
   then
     CONDA_ENVIRONMENT_ROOT=""
-    source deactivate
+    conda deactivate
   fi
 }
 
 # Check active shell.
-if [[ $(ps -p$$ -ocmd=) == "zsh" ]]; then
+if [[ $(ps -p$$ -ocmd=) == "/usr/bin/zsh" ]]; then
   # For zsh, use the chpwd hook.
   autoload -U add-zsh-hook
   add-zsh-hook chpwd conda_auto_env
